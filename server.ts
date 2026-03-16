@@ -165,26 +165,67 @@ async function startServer() {
     // Seed Indian Customers if empty
     db.exec(`
       INSERT INTO customers (name, mobile, address, status, username, password) 
-      SELECT 'Rajesh Kumar', '9876543210', 'Mumbai, Maharashtra', 'active', 'user', '12345'
-      WHERE NOT EXISTS (SELECT 1 FROM customers);
+      SELECT 'Rajesh Kumar', '9876543210', 'Mumbai, Maharashtra', 'active', 'rajesh', 'pass123'
+      WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Rajesh Kumar');
       
-      INSERT INTO customers (name, mobile, address, status) 
-      SELECT 'Priya Sharma', '9123456789', 'Delhi, NCR', 'active'
+      INSERT INTO customers (name, mobile, address, status, username, password) 
+      SELECT 'Priya Sharma', '9123456789', 'Delhi, NCR', 'active', 'priya', 'pass123'
       WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Priya Sharma');
 
-      INSERT INTO customers (name, mobile, address, status) 
-      SELECT 'Amit Patel', '9988776655', 'Ahmedabad, Gujarat', 'blacklisted'
+      INSERT INTO customers (name, mobile, address, status, username, password) 
+      SELECT 'Amit Patel', '9988776655', 'Ahmedabad, Gujarat', 'blacklisted', 'amit', 'pass123'
       WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Amit Patel');
 
-      INSERT INTO customers (name, mobile, address, status) 
-      SELECT 'Sneha Reddy', '9000011111', 'Hyderabad, Telangana', 'active'
+      INSERT INTO customers (name, mobile, address, status, username, password) 
+      SELECT 'Sneha Reddy', '9000011111', 'Hyderabad, Telangana', 'active', 'sneha', 'pass123'
       WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Sneha Reddy');
+
+      INSERT INTO customers (name, mobile, address, status, username, password) 
+      SELECT 'Vikram Singh', '9822001122', 'Jaipur, Rajasthan', 'active', 'vikram', 'pass123'
+      WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Vikram Singh');
+
+      INSERT INTO customers (name, mobile, address, status, username, password) 
+      SELECT 'Ananya Iyer', '9744556677', 'Chennai, Tamil Nadu', 'active', 'ananya', 'pass123'
+      WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Ananya Iyer');
 
       -- Seed initial lockers if empty
       INSERT INTO lockers (number, total_boxes) 
       SELECT 'L-001', 12 WHERE NOT EXISTS (SELECT 1 FROM lockers WHERE number = 'L-001');
       INSERT INTO lockers (number, total_boxes) 
       SELECT 'L-002', 12 WHERE NOT EXISTS (SELECT 1 FROM lockers WHERE number = 'L-002');
+      INSERT INTO lockers (number, total_boxes) 
+      SELECT 'L-003', 24 WHERE NOT EXISTS (SELECT 1 FROM lockers WHERE number = 'L-003');
+
+      -- Seed sample loans if empty
+      INSERT INTO loans (customer_id, loan_number, amount, disbursement_mode, interest_rate, interest_type, start_date, maturity_date, status)
+      SELECT 1, 'LN-1001', 50000, 'Cash', 1.5, 'simple', date('now', '-2 months'), date('now', '+10 months'), 'active'
+      WHERE NOT EXISTS (SELECT 1 FROM loans WHERE loan_number = 'LN-1001');
+
+      INSERT INTO loans (customer_id, loan_number, amount, disbursement_mode, interest_rate, interest_type, start_date, maturity_date, status)
+      SELECT 2, 'LN-1002', 120000, 'Bank Transfer', 1.2, 'compounded', date('now', '-1 month'), date('now', '+11 months'), 'active'
+      WHERE NOT EXISTS (SELECT 1 FROM loans WHERE loan_number = 'LN-1002');
+
+      INSERT INTO loans (customer_id, loan_number, amount, disbursement_mode, interest_rate, interest_type, start_date, maturity_date, status)
+      SELECT 4, 'LN-1003', 25000, 'UPI', 2.0, 'simple', date('now', '-15 days'), date('now', '+5 months'), 'active'
+      WHERE NOT EXISTS (SELECT 1 FROM loans WHERE loan_number = 'LN-1003');
+
+      -- Seed items for loans
+      INSERT INTO items (loan_id, type, purity, gross_weight, net_weight, market_rate, valuation, packet_number, locker_location)
+      SELECT 1, 'Gold Chain', '22K', 12.5, 12.0, 6500, 78000, 'PKT-A1', 'L-001/B1'
+      WHERE NOT EXISTS (SELECT 1 FROM items WHERE loan_id = 1);
+
+      INSERT INTO items (loan_id, type, purity, gross_weight, net_weight, market_rate, valuation, packet_number, locker_location)
+      SELECT 2, 'Gold Bangles', '22K', 35.0, 34.2, 6500, 222300, 'PKT-A2', 'L-001/B2'
+      WHERE NOT EXISTS (SELECT 1 FROM items WHERE loan_id = 2);
+
+      -- Seed some payments
+      INSERT INTO payments (loan_id, date, amount, mode, type, transaction_id, remarks)
+      SELECT 1, date('now', '-1 month'), 750, 'Cash', 'interest', 'TXN-001', 'First month interest'
+      WHERE NOT EXISTS (SELECT 1 FROM payments WHERE transaction_id = 'TXN-001');
+
+      INSERT INTO payments (loan_id, date, amount, mode, type, transaction_id, remarks)
+      SELECT 2, date('now', '-5 days'), 1440, 'UPI', 'interest', 'TXN-002', 'Interest payment'
+      WHERE NOT EXISTS (SELECT 1 FROM payments WHERE transaction_id = 'TXN-002');
     `);
 
     // Check for missing columns (Migrations)
