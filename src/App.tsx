@@ -17,8 +17,13 @@ import CustomerPanel from './components/CustomerPanel';
 
 export default function App() {
   const [auth, setAuth] = React.useState<{ role: 'admin' | 'customer' | null, user: any }>(() => {
-    const saved = localStorage.getItem('girvi_auth');
-    return saved ? JSON.parse(saved) : { role: null, user: null };
+    try {
+      const saved = localStorage.getItem('girvi_auth');
+      return saved ? JSON.parse(saved) : { role: null, user: null };
+    } catch (e) {
+      console.error('Failed to parse auth from localStorage', e);
+      return { role: null, user: null };
+    }
   });
 
   const handleLogin = async (id: string, pass: string) => {

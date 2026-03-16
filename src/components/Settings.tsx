@@ -16,6 +16,12 @@ import {
   Key
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 const sections = [
   { id: 'general', title: 'General Settings', icon: Globe, description: 'Branch info, currency, and localization' },
@@ -243,11 +249,4 @@ export default function Settings() {
       </div>
     </div>
   );
-}
-
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
 }

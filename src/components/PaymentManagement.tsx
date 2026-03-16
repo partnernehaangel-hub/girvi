@@ -7,10 +7,18 @@ import {
   ArrowUpCircle,
   Receipt,
   Filter,
-  CheckCircle2
+  CheckCircle2,
+  X,
+  TrendingUp
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export default function PaymentManagement() {
   const [loans, setLoans] = React.useState<any[]>([]);
@@ -257,12 +265,4 @@ export default function PaymentManagement() {
       )}
     </div>
   );
-}
-
-import { X, TrendingUp } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
 }

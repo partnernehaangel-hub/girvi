@@ -692,6 +692,3 @@ export default function CustomerManagement() {
     </div>
   );
 }
-
-// Remove duplicated cn definition at the end
-
