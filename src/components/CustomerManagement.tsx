@@ -388,6 +388,24 @@ export default function CustomerManagement() {
                 </div>
               </div>
 
+              {/* Portal Credentials */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="md:col-span-2">
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <Users size={14} />
+                    Portal Access (Optional)
+                  </h3>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Portal User ID</label>
+                  <input name="username" className="input-field" placeholder="e.g. rajesh123" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Portal Password</label>
+                  <input name="password" type="password" className="input-field" placeholder="Set a secure password" />
+                </div>
+              </div>
+
               {/* Additional Attachments */}
               <div className="space-y-6">
                 <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">

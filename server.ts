@@ -273,19 +273,20 @@ async function startServer() {
     const { 
       name, mobile, address, aadhaar, aadhaar_proof, 
       pan, pan_proof, photo, signature, nominee, 
-      nominee_proof, attachments 
+      nominee_proof, attachments, username, password
     } = req.body;
     
     const info = db.prepare(`
       INSERT INTO customers (
         name, mobile, address, aadhaar, aadhaar_proof, 
         pan, pan_proof, photo, signature, nominee, 
-        nominee_proof, attachments
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        nominee_proof, attachments, username, password
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       name, mobile, address, aadhaar, aadhaar_proof, 
       pan, pan_proof, photo, signature, nominee, 
-      nominee_proof, JSON.stringify(attachments || [])
+      nominee_proof, JSON.stringify(attachments || []),
+      username || null, password || null
     );
     res.json({ id: info.lastInsertRowid });
   });

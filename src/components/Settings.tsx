@@ -13,7 +13,8 @@ import {
   Users,
   Eye,
   EyeOff,
-  Key
+  Key,
+  AlertCircle
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -179,58 +180,108 @@ export default function Settings() {
 
             {activeSection === 'customers' && (
               <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold">Customer Portal Access</h3>
+                  <button 
+                    onClick={fetchCustomers}
+                    className="text-sm text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Database size={14} />
+                    Refresh List
+                  </button>
+                </div>
                 {loading ? (
-                  <div className="text-center py-8 text-gray-500">Loading customers...</div>
+                  <div className="text-center py-12">
+                    <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p className="text-gray-500">Loading customer data...</p>
+                  </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
-                          <th className="pb-4">Customer Name</th>
-                          <th className="pb-4">User ID</th>
-                          <th className="pb-4">Password</th>
-                          <th className="pb-4 text-right">Action</th>
+                          <th className="pb-4 px-2">Customer</th>
+                          <th className="pb-4 px-2">Portal ID (Username)</th>
+                          <th className="pb-4 px-2">Password</th>
+                          <th className="pb-4 px-2 text-right">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {customers.map((customer) => (
-                          <tr key={customer.id} className="group">
-                            <td className="py-4">
+                          <tr key={customer.id} className="group hover:bg-gray-50/50 transition-colors">
+                            <td className="py-4 px-2">
                               <p className="font-bold text-gray-900">{customer.name}</p>
                               <p className="text-xs text-gray-500">{customer.mobile}</p>
                             </td>
-                            <td className="py-4">
-                              <input 
-                                className="text-sm bg-gray-50 border border-gray-200 rounded px-2 py-1 w-32"
-                                defaultValue={customer.username || ''}
-                                onBlur={(e) => updateCredentials(customer.id, e.target.value, customer.password)}
-                                placeholder="Set ID"
-                              />
-                            </td>
-                            <td className="py-4">
-                              <div className="flex items-center gap-2">
+                            <td className="py-4 px-2">
+                              <div className="relative max-w-[160px]">
                                 <input 
-                                  type={showPassword[customer.id] ? 'text' : 'password'}
-                                  className="text-sm bg-gray-50 border border-gray-200 rounded px-2 py-1 w-32"
-                                  defaultValue={customer.password || ''}
-                                  onBlur={(e) => updateCredentials(customer.id, customer.username, e.target.value)}
-                                  placeholder="Set Pass"
+                                  className="text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                  defaultValue={customer.username || ''}
+                                  onBlur={(e) => {
+                                    if (e.target.value !== (customer.username || '')) {
+                                      updateCredentials(customer.id, e.target.value, customer.password || '');
+                                    }
+                                  }}
+                                  placeholder="Not Set"
                                 />
+                              </div>
+                            </td>
+                            <td className="py-4 px-2">
+                              <div className="flex items-center gap-2 max-w-[180px]">
+                                <div className="relative flex-1">
+                                  <input 
+                                    type={showPassword[customer.id] ? 'text' : 'password'}
+                                    className="text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    defaultValue={customer.password || ''}
+                                    onBlur={(e) => {
+                                      if (e.target.value !== (customer.password || '')) {
+                                        updateCredentials(customer.id, customer.username || '', e.target.value);
+                                      }
+                                    }}
+                                    placeholder="Not Set"
+                                  />
+                                  <button 
+                                    onClick={() => togglePassword(customer.id)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition-colors"
+                                  >
+                                    {showPassword[customer.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                                  </button>
+                                </div>
                                 <button 
-                                  onClick={() => togglePassword(customer.id)}
-                                  className="text-gray-400 hover:text-primary"
+                                  onClick={() => {
+                                    const randomPass = Math.random().toString(36).slice(-6).toUpperCase();
+                                    updateCredentials(customer.id, customer.username || customer.name.split(' ')[0].toLowerCase() + customer.id, randomPass);
+                                  }}
+                                  className="p-2 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                                  title="Auto-generate"
                                 >
-                                  {showPassword[customer.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                  <Smartphone size={16} />
                                 </button>
                               </div>
                             </td>
-                            <td className="py-4 text-right">
-                              <button className="p-2 text-primary hover:bg-primary/5 rounded-lg transition-all">
-                                <Key size={18} />
-                              </button>
+                            <td className="py-4 px-2 text-right">
+                              {customer.username && customer.password ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold uppercase">
+                                  <Shield size={10} />
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-bold uppercase">
+                                  <AlertCircle size={10} />
+                                  Pending
+                                </span>
+                              )}
                             </td>
                           </tr>
                         ))}
+                        {customers.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="py-12 text-center text-gray-400 italic">
+                              No customers found in the system.
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
