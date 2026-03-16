@@ -479,103 +479,135 @@ export default function CustomerManagement() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {isLoading ? (
-                <div className="col-span-full py-20 text-center text-gray-500">Loading customers...</div>
-              ) : filteredCustomers.length > 0 ? (
-                filteredCustomers.map((customer) => (
-                  <motion.div 
-                    key={customer.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="card p-6 space-y-4"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg overflow-hidden">
-                          {customer.photo ? (
-                            <img src={customer.photo} alt={customer.name} className="w-full h-full object-cover" />
-                          ) : (
-                            customer.name.charAt(0)
-                          )}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-lg">{customer.name}</h3>
-                          <p className="text-xs text-gray-500">ID: CUST-{customer.id.toString().padStart(4, '0')}</p>
-                        </div>
-                      </div>
-                      <button className="p-1 hover:bg-gray-100 rounded-md">
-                        <MoreVertical size={18} />
-                      </button>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Phone size={14} />
-                        {customer.mobile}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <MapPin size={14} />
-                        <span className="truncate">{customer.address || 'No address provided'}</span>
-                      </div>
-                    </div>
-
-                    {activeTab === 'kyc' && (
-                      <div className="grid grid-cols-4 gap-2 py-2">
-                        <button 
-                          onClick={() => customer.aadhaar_proof && setViewingDoc({ title: 'Aadhaar Proof', url: customer.aadhaar_proof })}
-                          className={cn("h-2 rounded-full transition-all", customer.aadhaar_proof ? "bg-emerald-500 hover:bg-emerald-600 cursor-pointer" : "bg-gray-200 cursor-not-allowed")} 
-                          title="Aadhaar" 
-                        />
-                        <button 
-                          onClick={() => customer.pan_proof && setViewingDoc({ title: 'PAN Proof', url: customer.pan_proof })}
-                          className={cn("h-2 rounded-full transition-all", customer.pan_proof ? "bg-emerald-500 hover:bg-emerald-600 cursor-pointer" : "bg-gray-200 cursor-not-allowed")} 
-                          title="PAN" 
-                        />
-                        <button 
-                          onClick={() => customer.photo && setViewingDoc({ title: 'Customer Photo', url: customer.photo })}
-                          className={cn("h-2 rounded-full transition-all", customer.photo ? "bg-emerald-500 hover:bg-emerald-600 cursor-pointer" : "bg-gray-200 cursor-not-allowed")} 
-                          title="Photo" 
-                        />
-                        <button 
-                          onClick={() => customer.signature && setViewingDoc({ title: 'Signature', url: customer.signature })}
-                          className={cn("h-2 rounded-full transition-all", customer.signature ? "bg-emerald-500 hover:bg-emerald-600 cursor-pointer" : "bg-gray-200 cursor-not-allowed")} 
-                          title="Signature" 
-                        />
-                      </div>
+            <div className="card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-gray-50 text-gray-500 text-[10px] uppercase tracking-wider">
+                    <tr>
+                      <th className="px-6 py-4 font-bold">Customer</th>
+                      <th className="px-6 py-4 font-bold">Mobile</th>
+                      <th className="px-6 py-4 font-bold text-center">Aadhaar</th>
+                      <th className="px-6 py-4 font-bold text-center">PAN</th>
+                      <th className="px-6 py-4 font-bold text-center">Photo</th>
+                      <th className="px-6 py-4 font-bold text-center">Signature</th>
+                      <th className="px-6 py-4 font-bold">Status</th>
+                      <th className="px-6 py-4 font-bold text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={8} className="py-20 text-center text-gray-500">Loading customers...</td>
+                      </tr>
+                    ) : filteredCustomers.length > 0 ? (
+                      filteredCustomers.map((customer) => (
+                        <tr key={customer.id} className="hover:bg-gray-50 transition-all">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden">
+                                {customer.photo ? (
+                                  <img src={customer.photo} alt={customer.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  customer.name.charAt(0)
+                                )}
+                              </div>
+                              <div>
+                                <h3 className="font-bold text-sm text-gray-900">{customer.name}</h3>
+                                <p className="text-[10px] text-gray-400">ID: CUST-{customer.id.toString().padStart(4, '0')}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{customer.mobile}</td>
+                          <td className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => customer.aadhaar_proof && setViewingDoc({ title: 'Aadhaar Proof', url: customer.aadhaar_proof })}
+                              className={cn(
+                                "p-1.5 rounded-full transition-all mx-auto flex items-center justify-center",
+                                customer.aadhaar_proof ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100 cursor-pointer" : "text-gray-300 bg-gray-50 cursor-not-allowed"
+                              )}
+                              title="Aadhaar"
+                            >
+                              {customer.aadhaar_proof ? <CheckCircle2 size={16} /> : <X size={16} />}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => customer.pan_proof && setViewingDoc({ title: 'PAN Proof', url: customer.pan_proof })}
+                              className={cn(
+                                "p-1.5 rounded-full transition-all mx-auto flex items-center justify-center",
+                                customer.pan_proof ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100 cursor-pointer" : "text-gray-300 bg-gray-50 cursor-not-allowed"
+                              )}
+                              title="PAN"
+                            >
+                              {customer.pan_proof ? <CheckCircle2 size={16} /> : <X size={16} />}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => customer.photo && setViewingDoc({ title: 'Customer Photo', url: customer.photo })}
+                              className={cn(
+                                "p-1.5 rounded-full transition-all mx-auto flex items-center justify-center",
+                                customer.photo ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100 cursor-pointer" : "text-gray-300 bg-gray-50 cursor-not-allowed"
+                              )}
+                              title="Photo"
+                            >
+                              {customer.photo ? <CheckCircle2 size={16} /> : <X size={16} />}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => customer.signature && setViewingDoc({ title: 'Signature', url: customer.signature })}
+                              className={cn(
+                                "p-1.5 rounded-full transition-all mx-auto flex items-center justify-center",
+                                customer.signature ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100 cursor-pointer" : "text-gray-300 bg-gray-50 cursor-not-allowed"
+                              )}
+                              title="Signature"
+                            >
+                              {customer.signature ? <CheckCircle2 size={16} /> : <X size={16} />}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className={cn(
+                              "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full uppercase",
+                              customer.status === 'blacklisted' ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"
+                            )}>
+                              {customer.status === 'blacklisted' ? <UserMinus size={10} /> : <ShieldCheck size={10} />}
+                              {customer.status}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button 
+                                onClick={() => {
+                                  setSelectedCustomer(customer);
+                                  setActiveTab('ledger');
+                                }}
+                                className="p-2 text-primary hover:bg-primary/5 rounded-lg transition-all"
+                                title="View Ledger"
+                              >
+                                <BookOpen size={18} />
+                              </button>
+                              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
+                                <MoreVertical size={18} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="py-20 text-center">
+                          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300 mb-4">
+                            <Users size={32} />
+                          </div>
+                          <h3 className="text-lg font-bold">No Customers Found</h3>
+                          <p className="text-gray-500">Try adjusting your search or filters.</p>
+                        </td>
+                      </tr>
                     )}
-
-                    <div className="pt-4 border-t border-gray-100 flex justify-between items-center">
-                      <div className={cn(
-                        "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
-                        customer.status === 'blacklisted' ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"
-                      )}>
-                        {customer.status === 'blacklisted' ? <UserMinus size={12} /> : <ShieldCheck size={12} />}
-                        {customer.status === 'blacklisted' ? 'Blacklisted' : 'KYC Verified'}
-                      </div>
-                      <button 
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setActiveTab('ledger');
-                        }}
-                        className="text-sm font-medium text-primary hover:underline"
-                      >
-                        View Ledger
-                      </button>
-                    </div>
-                  </motion.div>
-                ))
-              ) : (
-                <div className="col-span-full py-20 text-center space-y-4 bg-white rounded-2xl border border-dashed border-gray-200">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300">
-                    <Users size={32} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold">No Customers Found</h3>
-                    <p className="text-gray-500">Try adjusting your search or filters.</p>
-                  </div>
-                </div>
-              )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </motion.div>
         )}
