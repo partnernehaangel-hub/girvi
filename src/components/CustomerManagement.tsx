@@ -36,8 +36,87 @@ const submenus = [
   { id: 'blacklist', label: 'Blacklisted / Defaulters', icon: UserMinus },
 ];
 
+const CameraCapture = ({ onCapture, onClose }: { onCapture: (base64: string) => void, onClose: () => void }) => {
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
+  React.useEffect(() => {
+    startCamera();
+    return () => stopCamera();
+  }, []);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      alert("Could not access camera. Please check permissions.");
+      onClose();
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+    }
+  };
+
+  const capture = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(video, 0, 0);
+      const base64 = canvas.toDataURL('image/jpeg');
+      onCapture(base64);
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden">
+        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+          <h3 className="text-lg font-bold text-gray-900">Capture Photo</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X size={24} className="text-gray-500" />
+          </button>
+        </div>
+        <div className="p-6">
+          <div className="aspect-video bg-black rounded-2xl overflow-hidden relative">
+            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+          <div className="mt-6 flex gap-4">
+            <button 
+              onClick={onClose}
+              className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={capture}
+              className="flex-1 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+            >
+              <Camera size={20} />
+              Capture
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const FileUpload = ({ label, name, onFileChange }: { label: string, name: string, onFileChange: (name: string, value: string) => void }) => {
   const [preview, setPreview] = React.useState<string | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = React.useState(false);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,7 +135,10 @@ const FileUpload = ({ label, name, onFileChange }: { label: string, name: string
     <div className="space-y-2">
       <label className="text-sm font-medium text-gray-700">{label}</label>
       <div className="flex items-center gap-4">
-        <div className="relative w-24 h-24 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center overflow-hidden bg-gray-50 hover:border-primary transition-all group">
+        <div 
+          onClick={() => setIsCameraOpen(true)}
+          className="relative w-24 h-24 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center overflow-hidden bg-gray-50 hover:border-primary transition-all group cursor-pointer"
+        >
           {preview ? (
             <img src={preview} alt="Preview" className="w-full h-full object-cover" />
           ) : (
@@ -65,12 +147,6 @@ const FileUpload = ({ label, name, onFileChange }: { label: string, name: string
               <span className="text-[10px] mt-1">Capture</span>
             </div>
           )}
-          <input 
-            type="file" 
-            accept="image/*" 
-            onChange={handleFile}
-            className="absolute inset-0 opacity-0 cursor-pointer" 
-          />
         </div>
         <div className="flex-1">
           <div className="relative">
@@ -91,6 +167,15 @@ const FileUpload = ({ label, name, onFileChange }: { label: string, name: string
           <p className="text-[10px] text-gray-400 mt-1">JPG, PNG or PDF (Max 2MB)</p>
         </div>
       </div>
+      {isCameraOpen && (
+        <CameraCapture 
+          onCapture={(base64) => {
+            setPreview(base64);
+            onFileChange(name, base64);
+          }}
+          onClose={() => setIsCameraOpen(false)}
+        />
+      )}
     </div>
   );
 };

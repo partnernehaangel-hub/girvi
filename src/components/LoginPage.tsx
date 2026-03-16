@@ -3,21 +3,24 @@ import { motion } from 'motion/react';
 import { Lock, User, ShieldCheck } from 'lucide-react';
 
 interface LoginPageProps {
-  onLogin: (id: string, pass: string) => boolean;
+  onLogin: (id: string, pass: string) => Promise<boolean>;
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const [id, setId] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onLogin(id, password)) {
-      setError('');
-    } else {
+    setLoading(true);
+    setError('');
+    const success = await onLogin(id, password);
+    if (!success) {
       setError('Invalid ID or Password');
     }
+    setLoading(false);
   };
 
   return (
@@ -31,10 +34,15 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-full mb-4">
             <ShieldCheck className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Admin Login</h1>
+          <h1 className="text-2xl font-bold text-white">Girvi Software Login</h1>
           <p className="text-blue-100 text-sm mt-2">Gold & Silver Girvi Management System</p>
-          <div className="mt-4 inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] text-white/80 font-medium">
-            Use ID: admin | Pass: 12345
+          <div className="mt-4 flex flex-col gap-2">
+            <div className="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] text-white/80 font-medium">
+              Admin: admin | 12345
+            </div>
+            <div className="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] text-white/80 font-medium">
+              Customer: user | 12345
+            </div>
           </div>
         </div>
 
@@ -46,7 +54,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           )}
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin ID</label>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">User ID</label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -77,9 +85,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
           <button
             type="submit"
-            className="w-full py-3 bg-[#2C5AA0] hover:bg-[#1e407a] text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all transform active:scale-[0.98]"
+            disabled={loading}
+            className="w-full py-3 bg-[#2C5AA0] hover:bg-[#1e407a] text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all transform active:scale-[0.98] disabled:opacity-50"
           >
-            Sign In
+            {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 

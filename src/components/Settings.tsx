@@ -9,13 +9,18 @@ import {
   Smartphone,
   CreditCard,
   ChevronRight,
-  Save
+  Save,
+  Users,
+  Eye,
+  EyeOff,
+  Key
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const sections = [
   { id: 'general', title: 'General Settings', icon: Globe, description: 'Branch info, currency, and localization' },
   { id: 'interest', title: 'Interest Rate Table', icon: CreditCard, description: 'Manage standard and penalty rates' },
+  { id: 'customers', title: 'Customer Credentials', icon: Users, description: 'Manage Customer Panel IDs and Passwords' },
   { id: 'users', title: 'User Management', icon: UserCog, description: 'Role-based access and staff accounts' },
   { id: 'notifications', title: 'Notification Templates', icon: BellRing, description: 'Customize SMS and WhatsApp messages' },
   { id: 'security', title: 'Security & Compliance', icon: Shield, description: 'Audit logs and data encryption' },
@@ -24,6 +29,47 @@ const sections = [
 
 export default function Settings() {
   const [activeSection, setActiveSection] = React.useState('general');
+  const [customers, setCustomers] = React.useState<any[]>([]);
+  const [showPassword, setShowPassword] = React.useState<Record<number, boolean>>({});
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (activeSection === 'customers') {
+      fetchCustomers();
+    }
+  }, [activeSection]);
+
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/customers');
+      const data = await res.json();
+      setCustomers(data);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateCredentials = async (customerId: number, username: string, pass: string) => {
+    try {
+      const res = await fetch('/api/admin/customer-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId, username, password: pass })
+      });
+      if (res.ok) {
+        fetchCustomers();
+      }
+    } catch (error) {
+      console.error('Error updating credentials:', error);
+    }
+  };
+
+  const togglePassword = (id: number) => {
+    setShowPassword(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
@@ -122,29 +168,71 @@ export default function Settings() {
                     <span className="font-bold text-rose-500">% / Mo</span>
                   </div>
                 </div>
-                <div className="space-y-4">
-                  <h4 className="font-bold text-sm uppercase tracking-wider text-gray-400">Interest Calculation Logic</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all">
-                      <input type="radio" name="logic" defaultChecked className="w-4 h-4 text-primary" />
-                      <div>
-                        <p className="font-bold text-sm">Actual Days / 30</p>
-                        <p className="text-xs text-gray-500">Standard Simple Interest</p>
-                      </div>
-                    </label>
-                    <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all">
-                      <input type="radio" name="logic" className="w-4 h-4 text-primary" />
-                      <div>
-                        <p className="font-bold text-sm">Monthly Compounding</p>
-                        <p className="text-xs text-gray-500">Interest on interest monthly</p>
-                      </div>
-                    </label>
-                  </div>
-                </div>
               </div>
             )}
 
-            {activeSection !== 'general' && activeSection !== 'interest' && (
+            {activeSection === 'customers' && (
+              <div className="space-y-6">
+                {loading ? (
+                  <div className="text-center py-8 text-gray-500">Loading customers...</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+                          <th className="pb-4">Customer Name</th>
+                          <th className="pb-4">User ID</th>
+                          <th className="pb-4">Password</th>
+                          <th className="pb-4 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {customers.map((customer) => (
+                          <tr key={customer.id} className="group">
+                            <td className="py-4">
+                              <p className="font-bold text-gray-900">{customer.name}</p>
+                              <p className="text-xs text-gray-500">{customer.mobile}</p>
+                            </td>
+                            <td className="py-4">
+                              <input 
+                                className="text-sm bg-gray-50 border border-gray-200 rounded px-2 py-1 w-32"
+                                defaultValue={customer.username || ''}
+                                onBlur={(e) => updateCredentials(customer.id, e.target.value, customer.password)}
+                                placeholder="Set ID"
+                              />
+                            </td>
+                            <td className="py-4">
+                              <div className="flex items-center gap-2">
+                                <input 
+                                  type={showPassword[customer.id] ? 'text' : 'password'}
+                                  className="text-sm bg-gray-50 border border-gray-200 rounded px-2 py-1 w-32"
+                                  defaultValue={customer.password || ''}
+                                  onBlur={(e) => updateCredentials(customer.id, customer.username, e.target.value)}
+                                  placeholder="Set Pass"
+                                />
+                                <button 
+                                  onClick={() => togglePassword(customer.id)}
+                                  className="text-gray-400 hover:text-primary"
+                                >
+                                  {showPassword[customer.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-4 text-right">
+                              <button className="p-2 text-primary hover:bg-primary/5 rounded-lg transition-all">
+                                <Key size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeSection !== 'general' && activeSection !== 'interest' && activeSection !== 'customers' && (
               <div className="h-64 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-100 rounded-2xl">
                 <SettingsIcon size={48} className="mb-4 opacity-10" />
                 <p>Configuration options for {sections.find(s => s.id === activeSection)?.title} coming soon</p>

@@ -38,10 +38,32 @@ export default function LoanManagement() {
     { type: 'Gold Ornament', purity: '22K', gross_weight: 10.5, net_weight: 10.2, wastage: 0, market_rate: 6500, valuation: 66300, packet_number: 'PKT-001', locker_location: 'Locker A-1', photos: [] }
   ]);
 
-  React.useEffect(() => {
+  const fetchLoans = () => {
     fetch('/api/loans').then(res => res.json()).then(setLoans);
+  };
+
+  React.useEffect(() => {
+    fetchLoans();
     fetch('/api/customers').then(res => res.json()).then(setCustomers);
   }, []);
+
+  const handleApproveClosure = async (loanId: number, approve: boolean) => {
+    if (!confirm(`Are you sure you want to ${approve ? 'approve' : 'reject'} this closure request?`)) return;
+    
+    try {
+      const res = await fetch('/api/admin/approve-closure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loanId, approve })
+      });
+      if (res.ok) {
+        setSelectedLoanDetail(null);
+        fetchLoans();
+      }
+    } catch (error) {
+      console.error('Error approving closure:', error);
+    }
+  };
 
   const addItem = () => {
     setItems([...items, { type: 'Gold Ornament', purity: '22K', gross_weight: 0, net_weight: 0, wastage: 0, market_rate: 0, valuation: 0, packet_number: '', locker_location: '', photos: [] }]);
@@ -611,17 +633,35 @@ export default function LoanManagement() {
                 >
                   Close
                 </button>
-                <button 
-                  onClick={() => {
-                    setSelectedLoan(selectedLoanDetail);
-                    setSelectedLoanDetail(null);
-                    setIsTopUpModalOpen(true);
-                  }}
-                  className="btn-primary px-8 py-2 flex items-center gap-2"
-                >
-                  <TrendingUp size={18} />
-                  Top Up Loan
-                </button>
+                {selectedLoanDetail.closure_requested === 1 && (
+                  <>
+                    <button 
+                      onClick={() => handleApproveClosure(selectedLoanDetail.id, false)}
+                      className="px-8 py-2 border border-rose-200 text-rose-600 rounded-lg hover:bg-rose-50 font-bold"
+                    >
+                      Reject Closure
+                    </button>
+                    <button 
+                      onClick={() => handleApproveClosure(selectedLoanDetail.id, true)}
+                      className="px-8 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold shadow-lg shadow-emerald-100"
+                    >
+                      Approve Closure
+                    </button>
+                  </>
+                )}
+                {!selectedLoanDetail.closure_requested && selectedLoanDetail.status === 'active' && (
+                  <button 
+                    onClick={() => {
+                      setSelectedLoan(selectedLoanDetail);
+                      setSelectedLoanDetail(null);
+                      setIsTopUpModalOpen(true);
+                    }}
+                    className="btn-primary px-8 py-2 flex items-center gap-2"
+                  >
+                    <TrendingUp size={18} />
+                    Top Up Loan
+                  </button>
+                )}
               </div>
             </motion.div>
           </div>

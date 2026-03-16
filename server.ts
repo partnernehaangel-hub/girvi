@@ -26,12 +26,14 @@ db.exec(`
     nominee_proof TEXT,
     attachments TEXT, -- JSON array of extra proofs
     status TEXT DEFAULT 'active', -- active, blacklisted
+    username TEXT,
+    password TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
   -- Seed Indian Customers if empty
-  INSERT INTO customers (name, mobile, address, status) 
-  SELECT 'Rajesh Kumar', '9876543210', 'Mumbai, Maharashtra', 'active'
+  INSERT INTO customers (name, mobile, address, status, username, password) 
+  SELECT 'Rajesh Kumar', '9876543210', 'Mumbai, Maharashtra', 'active', 'user', '12345'
   WHERE NOT EXISTS (SELECT 1 FROM customers);
   
   INSERT INTO customers (name, mobile, address, status) 
@@ -60,6 +62,7 @@ db.exec(`
     maturity_date DATE,
     penalty_rate REAL,
     status TEXT DEFAULT 'active',
+    closure_requested INTEGER DEFAULT 0, -- 0: no, 1: requested
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(customer_id) REFERENCES customers(id)
   );
@@ -164,7 +167,23 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '50mb' }));
+
+  // Auth API
+  app.post("/api/login", (req, res) => {
+    const { username, password } = req.body;
+    
+    if (username === 'admin' && password === '12345') {
+      return res.json({ role: 'admin', user: { id: 0, name: 'Administrator' } });
+    }
+
+    const customer = db.prepare("SELECT * FROM customers WHERE username = ? AND password = ?").get(username, password);
+    if (customer) {
+      return res.json({ role: 'customer', user: customer });
+    }
+
+    res.status(401).json({ error: "Invalid credentials" });
+  });
 
   // API Routes
   app.get("/api/dashboard/stats", (req, res) => {
@@ -198,6 +217,12 @@ async function startServer() {
     res.json(customers);
   });
 
+  app.post("/api/admin/customer-credentials", (req, res) => {
+    const { customerId, username, password } = req.body;
+    db.prepare("UPDATE customers SET username = ?, password = ? WHERE id = ?").run(username, password, customerId);
+    res.json({ success: true });
+  });
+
   app.post("/api/customers", (req, res) => {
     const { 
       name, mobile, address, aadhaar, aadhaar_proof, 
@@ -221,13 +246,38 @@ async function startServer() {
 
   // Loans
   app.get("/api/loans", (req, res) => {
-    const loans = db.prepare(`
+    const customerId = req.query.customerId;
+    let query = `
       SELECT l.*, c.name as customer_name 
       FROM loans l 
       JOIN customers c ON l.customer_id = c.id 
-      ORDER BY l.created_at DESC
-    `).all();
+    `;
+    let params = [];
+    if (customerId) {
+      query += " WHERE l.customer_id = ?";
+      params.push(customerId);
+    }
+    query += " ORDER BY l.created_at DESC";
+    const loans = db.prepare(query).all(...params);
     res.json(loans);
+  });
+
+  app.post("/api/customer/loan-closure-request", (req, res) => {
+    const { loanId } = req.body;
+    db.prepare("UPDATE loans SET closure_requested = 1 WHERE id = ?").run(loanId);
+    res.json({ success: true });
+  });
+
+  app.post("/api/admin/approve-closure", (req, res) => {
+    const { loanId, approve } = req.body;
+    if (approve) {
+      db.prepare("UPDATE loans SET status = 'closed', closure_requested = 0 WHERE id = ?").run(loanId);
+      // Also release items
+      db.prepare("UPDATE items SET status = 'released' WHERE loan_id = ?").run(loanId);
+    } else {
+      db.prepare("UPDATE loans SET closure_requested = 0 WHERE id = ?").run(loanId);
+    }
+    res.json({ success: true });
   });
 
   app.get("/api/loans/:id", (req, res) => {
@@ -312,6 +362,28 @@ async function startServer() {
   });
 
   // Payments
+  app.get("/api/payments", (req, res) => {
+    const customerId = req.query.customerId;
+    const loanId = req.query.loanId;
+    let query = `
+      SELECT p.*, l.loan_number, c.name as customer_name
+      FROM payments p
+      JOIN loans l ON p.loan_id = l.id
+      JOIN customers c ON l.customer_id = c.id
+    `;
+    let params = [];
+    if (loanId) {
+      query += " WHERE p.loan_id = ?";
+      params.push(loanId);
+    } else if (customerId) {
+      query += " WHERE l.customer_id = ?";
+      params.push(customerId);
+    }
+    query += " ORDER BY p.date DESC";
+    const payments = db.prepare(query).all(...params);
+    res.json(payments);
+  });
+
   app.post("/api/payments", (req, res) => {
     const { loan_id, date, amount, mode, type, remarks, transaction_id } = req.body;
     const info = db.prepare("INSERT INTO payments (loan_id, date, amount, mode, type, remarks, transaction_id) VALUES (?, ?, ?, ?, ?, ?, ?)").run(loan_id, date, amount, mode, type, remarks, transaction_id);
@@ -353,13 +425,24 @@ async function startServer() {
 
   // Items
   app.get("/api/items", (req, res) => {
-    const items = db.prepare(`
+    const loanId = req.query.loanId;
+    const customerId = req.query.customerId;
+    let query = `
       SELECT i.*, c.name as customer_name, l.loan_number 
       FROM items i
       JOIN loans l ON i.loan_id = l.id
       JOIN customers c ON l.customer_id = c.id
-      ORDER BY i.id DESC
-    `).all();
+    `;
+    let params = [];
+    if (loanId) {
+      query += " WHERE i.loan_id = ?";
+      params.push(loanId);
+    } else if (customerId) {
+      query += " WHERE l.customer_id = ?";
+      params.push(customerId);
+    }
+    query += " ORDER BY i.id DESC";
+    const items = db.prepare(query).all(...params);
     res.json(items);
   });
 

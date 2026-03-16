@@ -13,28 +13,50 @@ import GirviItems from './components/GirviItems';
 import Alerts from './components/Alerts';
 import Settings from './components/Settings';
 import LoginPage from './components/LoginPage';
+import CustomerPanel from './components/CustomerPanel';
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = React.useState(() => {
-    return localStorage.getItem('isAdminAuthenticated') === 'true';
+  const [auth, setAuth] = React.useState<{ role: 'admin' | 'customer' | null, user: any }>(() => {
+    const saved = localStorage.getItem('girvi_auth');
+    return saved ? JSON.parse(saved) : { role: null, user: null };
   });
 
-  const handleLogin = (id: string, pass: string) => {
-    if (id === 'admin' && pass === '12345') {
-      setIsAuthenticated(true);
-      localStorage.setItem('isAdminAuthenticated', 'true');
-      return true;
+  const handleLogin = async (id: string, pass: string) => {
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: id, password: pass })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setAuth(data);
+        localStorage.setItem('girvi_auth', JSON.stringify(data));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
   const handleLogout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('isAdminAuthenticated');
+    setAuth({ role: null, user: null });
+    localStorage.removeItem('girvi_auth');
   };
 
-  if (!isAuthenticated) {
+  if (!auth.role) {
     return <LoginPage onLogin={handleLogin} />;
+  }
+
+  if (auth.role === 'customer') {
+    return (
+      <Router>
+        <CustomerPanel user={auth.user} onLogout={handleLogout} />
+      </Router>
+    );
   }
 
   return (
@@ -54,8 +76,7 @@ export default function App() {
             <Route path="/docs" element={<LegalDocs />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/settings" element={<Settings />} />
-            {/* Add other routes as needed */}
-            <Route path="*" element={<div className="p-8 text-center text-gray-500">Module coming soon...</div>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>
