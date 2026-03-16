@@ -49,47 +49,71 @@ export default function LockerManagement() {
   const fetchLockers = () => {
     setIsLoading(true);
     fetch('/api/lockers')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch lockers');
+        return res.json();
+      })
       .then(data => {
         setLockers(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching lockers:', err);
         setIsLoading(false);
       });
   };
 
   const fetchLoans = () => {
     fetch('/api/loans')
-      .then(res => res.json())
-      .then(setLoans);
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch loans');
+        return res.json();
+      })
+      .then(setLoans)
+      .catch(err => console.error('Error fetching loans:', err));
   };
 
   const fetchAuditLogs = () => {
     fetch('/api/audit-logs')
-      .then(res => res.json())
-      .then(setAuditLogs);
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch audit logs');
+        return res.json();
+      })
+      .then(setAuditLogs)
+      .catch(err => console.error('Error fetching audit logs:', err));
   };
 
   const fetchBoxes = (lockerId: number) => {
     fetch(`/api/lockers/${lockerId}/boxes`)
-      .then(res => res.json())
-      .then(setLockerBoxes);
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch boxes');
+        return res.json();
+      })
+      .then(setLockerBoxes)
+      .catch(err => console.error('Error fetching boxes:', err));
   };
 
   const handleAddLocker = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/lockers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newLocker)
-    });
-    
-    if (res.ok) {
-      setIsAddLockerOpen(false);
-      setNewLocker({ number: '', total_boxes: 12 });
-      fetchLockers();
-      fetchAuditLogs();
-    } else {
-      const data = await res.json();
-      alert(data.error || 'Failed to create locker');
+    try {
+      const res = await fetch('/api/lockers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newLocker)
+      });
+      
+      if (res.ok) {
+        setIsAddLockerOpen(false);
+        setNewLocker({ number: '', total_boxes: 12 });
+        fetchLockers();
+        fetchAuditLogs();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to create locker');
+      }
+    } catch (err) {
+      console.error('Error adding locker:', err);
+      alert('Network error while adding locker');
     }
   };
 
@@ -97,35 +121,51 @@ export default function LockerManagement() {
     e.preventDefault();
     if (!selectedBox || !assignmentData.loan_id) return;
 
-    const loan = loans.find(l => l.id.toString() === assignmentData.loan_id);
-    
-    const res = await fetch(`/api/boxes/${selectedBox.id}/assign`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        packet_id: assignmentData.packet_id,
-        loan_id: assignmentData.loan_id,
-        customer_id: loan?.customer_id
-      })
-    });
+    try {
+      const loan = loans.find(l => l.id.toString() === assignmentData.loan_id);
+      
+      const res = await fetch(`/api/boxes/${selectedBox.id}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          packet_id: assignmentData.packet_id,
+          loan_id: assignmentData.loan_id,
+          customer_id: loan?.customer_id
+        })
+      });
 
-    if (res.ok) {
-      setIsAssignModalOpen(false);
-      setAssignmentData({ loan_id: '', packet_id: '' });
-      fetchBoxes(selectedLocker.id);
-      fetchLockers();
-      fetchAuditLogs();
+      if (res.ok) {
+        setIsAssignModalOpen(false);
+        setAssignmentData({ loan_id: '', packet_id: '' });
+        fetchBoxes(selectedLocker.id);
+        fetchLockers();
+        fetchAuditLogs();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to assign box');
+      }
+    } catch (err) {
+      console.error('Error assigning box:', err);
+      alert('Network error while assigning box');
     }
   };
 
   const handleEmptyBox = async (boxId: number) => {
-    const res = await fetch(`/api/boxes/${boxId}/empty`, {
-      method: 'POST'
-    });
-    if (res.ok) {
-      fetchBoxes(selectedLocker.id);
-      fetchLockers();
-      fetchAuditLogs();
+    try {
+      const res = await fetch(`/api/boxes/${boxId}/empty`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        fetchBoxes(selectedLocker.id);
+        fetchLockers();
+        fetchAuditLogs();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to empty box');
+      }
+    } catch (err) {
+      console.error('Error emptying box:', err);
+      alert('Network error while emptying box');
     }
   };
 

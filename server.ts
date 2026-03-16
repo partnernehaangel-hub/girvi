@@ -578,6 +578,36 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // Settings
+  app.get("/api/settings", (req, res) => {
+    try {
+      const settings = db.prepare("SELECT * FROM settings").all();
+      const settingsObj = settings.reduce((acc: any, curr: any) => {
+        acc[curr.key] = curr.value;
+        return acc;
+      }, {});
+      res.json(settingsObj);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  app.post("/api/settings", (req, res) => {
+    const settings = req.body;
+    try {
+      const upsert = db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)");
+      const transaction = db.transaction((data) => {
+        for (const [key, value] of Object.entries(data)) {
+          upsert.run(key, String(value));
+        }
+      });
+      transaction(settings);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
   // Audit Logs
   app.get("/api/audit-logs", (req, res) => {
     const logs = db.prepare("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 100").all();

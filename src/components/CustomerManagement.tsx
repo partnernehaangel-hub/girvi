@@ -238,12 +238,20 @@ export default function CustomerManagement() {
         body: JSON.stringify(finalData)
       });
       if (res.ok) {
-        alert('Customer added successfully!');
+        alert('Customer registered successfully!');
         setActiveTab('list');
-        window.location.reload();
+        // Refresh customer list
+        fetch('/api/customers')
+          .then(res => res.json())
+          .then(setCustomers)
+          .catch(err => console.error('Error refreshing customers:', err));
+      } else {
+        const errData = await res.json();
+        alert('Registration failed: ' + (errData.error || 'Unknown error'));
       }
     } catch (err) {
-      console.error(err);
+      console.error('Registration error:', err);
+      alert('An error occurred during registration. Please try again.');
     }
   };
 

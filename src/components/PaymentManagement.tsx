@@ -29,7 +29,13 @@ export default function PaymentManagement() {
   const [isDuplicateTx, setIsDuplicateTx] = React.useState(false);
 
   React.useEffect(() => {
-    fetch('/api/loans').then(res => res.json()).then(setLoans);
+    fetch('/api/loans')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch loans');
+        return res.json();
+      })
+      .then(setLoans)
+      .catch(err => console.error('Error fetching loans:', err));
   }, []);
 
   const checkDuplicateTransaction = async (txId: string) => {
@@ -37,13 +43,18 @@ export default function PaymentManagement() {
       setIsDuplicateTx(false);
       return;
     }
-    const res = await fetch(`/api/payments/check-transaction/${txId}`);
-    const data = await res.json();
-    if (data.exists) {
-      setIsDuplicateTx(true);
-      alert('Duplicate Transaction ID detected! Please verify.');
-    } else {
-      setIsDuplicateTx(false);
+    try {
+      const res = await fetch(`/api/payments/check-transaction/${txId}`);
+      if (!res.ok) throw new Error('Failed to check transaction');
+      const data = await res.json();
+      if (data.exists) {
+        setIsDuplicateTx(true);
+        alert('Duplicate Transaction ID detected! Please verify.');
+      } else {
+        setIsDuplicateTx(false);
+      }
+    } catch (err) {
+      console.error('Error checking transaction:', err);
     }
   };
 
@@ -151,7 +162,7 @@ export default function PaymentManagement() {
               </button>
             </div>
             
-            <form className="space-y-6" onSubmit={(e) => {
+            <form className="space-y-6" onSubmit={async (e) => {
               e.preventDefault();
               if (isDuplicateTx) {
                 alert('Cannot submit with duplicate Transaction ID');
@@ -159,14 +170,23 @@ export default function PaymentManagement() {
               }
               const formData = new FormData(e.currentTarget);
               const data = Object.fromEntries(formData.entries());
-              fetch('/api/payments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-              }).then(() => {
-                setIsPaymentModalOpen(false);
-                window.location.reload();
-              });
+              try {
+                const res = await fetch('/api/payments', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                  setIsPaymentModalOpen(false);
+                  window.location.reload();
+                } else {
+                  const errData = await res.json();
+                  alert(errData.error || 'Failed to record payment');
+                }
+              } catch (err) {
+                console.error('Error recording payment:', err);
+                alert('Network error while recording payment');
+              }
             }}>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Select Loan</label>

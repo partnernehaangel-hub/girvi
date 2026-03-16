@@ -33,11 +33,20 @@ export default function Reports() {
 
   React.useEffect(() => {
     Promise.all([
-      fetch('/api/loans').then(res => res.json()),
-      fetch('/api/payments').then(res => res.json())
+      fetch('/api/loans').then(res => {
+        if (!res.ok) throw new Error('Failed to fetch loans');
+        return res.json();
+      }),
+      fetch('/api/payments').then(res => {
+        if (!res.ok) throw new Error('Failed to fetch payments');
+        return res.json();
+      })
     ]).then(([loansData, paymentsData]) => {
       setLoans(loansData);
       setPayments(paymentsData);
+      setLoading(false);
+    }).catch(err => {
+      console.error('Error fetching report data:', err);
       setLoading(false);
     });
   }, []);
@@ -204,7 +213,7 @@ export default function Reports() {
             Asset Distribution
           </h3>
           <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <PieChart>
                 <Pie
                   data={assetData}

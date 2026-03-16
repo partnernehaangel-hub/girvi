@@ -454,7 +454,10 @@ export default function CustomerPanel({ user, onLogout }: CustomerPanelProps) {
                             <td className="px-6 py-4 whitespace-nowrap text-gray-600 uppercase text-xs">{payment.mode}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-gray-600 capitalize">{payment.type.replace('_', ' ')}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-right">
-                              <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                              <button 
+                                onClick={() => alert('Payment receipt download feature coming soon!')}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                              >
                                 <Download className="w-5 h-5" />
                               </button>
                             </td>
@@ -467,7 +470,10 @@ export default function CustomerPanel({ user, onLogout }: CustomerPanelProps) {
               )}
               {activeTab === 'docs' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group hover:border-blue-200 transition-all cursor-pointer">
+                  <div 
+                    onClick={() => alert('Document download feature coming soon!')}
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group hover:border-blue-200 transition-all cursor-pointer"
+                  >
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-blue-50 rounded-xl text-blue-600">
                         <FileText className="w-6 h-6" />
@@ -479,7 +485,10 @@ export default function CustomerPanel({ user, onLogout }: CustomerPanelProps) {
                     </div>
                     <Download className="w-5 h-5 text-gray-400 group-hover:text-blue-600" />
                   </div>
-                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group hover:border-blue-200 transition-all cursor-pointer">
+                  <div 
+                    onClick={() => alert('Document download feature coming soon!')}
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group hover:border-blue-200 transition-all cursor-pointer"
+                  >
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600">
                         <ShieldCheck className="w-6 h-6" />

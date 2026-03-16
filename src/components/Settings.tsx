@@ -39,12 +39,64 @@ export default function Settings() {
   const [customers, setCustomers] = React.useState<any[]>([]);
   const [showPassword, setShowPassword] = React.useState<Record<number, boolean>>({});
   const [loading, setLoading] = React.useState(false);
+  const [settings, setSettings] = React.useState<any>({
+    branchName: 'Digital Communique - Main Branch',
+    contactNumber: '+91 98765 43210',
+    branchAddress: '123, Gold Plaza, MG Road, Mumbai, Maharashtra - 400001',
+    financialYearStart: '2025-04-01',
+    currencySymbol: '₹',
+    standardInterestRate: '1.5',
+    penaltyInterestRate: '2.0'
+  });
+
+  React.useEffect(() => {
+    fetchSettings();
+  }, []);
 
   React.useEffect(() => {
     if (activeSection === 'customers') {
       fetchCustomers();
     }
   }, [activeSection]);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        if (Object.keys(data).length > 0) {
+          setSettings(prev => ({ ...prev, ...data }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+      if (res.ok) {
+        alert('Settings saved successfully!');
+      } else {
+        alert('Failed to save settings');
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert('Network error while saving settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateSetting = (key: string, value: string) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
 
   const fetchCustomers = async () => {
     try {
@@ -85,9 +137,13 @@ export default function Settings() {
           <h1 className="text-3xl font-bold text-text-dark">System Settings</h1>
           <p className="text-gray-500 mt-1">Configure your Girvi Management platform</p>
         </div>
-        <button className="btn-primary flex items-center gap-2">
+        <button 
+          onClick={handleSaveSettings}
+          disabled={loading}
+          className="btn-primary flex items-center gap-2 disabled:opacity-50"
+        >
           <Save size={18} />
-          Save All Changes
+          {loading ? 'Saving...' : 'Save All Changes'}
         </button>
       </header>
 
@@ -132,23 +188,44 @@ export default function Settings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1">
                   <label className="text-sm font-medium">Branch Name</label>
-                  <input className="input-field" defaultValue="Digital Communique - Main Branch" />
+                  <input 
+                    className="input-field" 
+                    value={settings.branchName} 
+                    onChange={(e) => updateSetting('branchName', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium">Contact Number</label>
-                  <input className="input-field" defaultValue="+91 98765 43210" />
+                  <input 
+                    className="input-field" 
+                    value={settings.contactNumber} 
+                    onChange={(e) => updateSetting('contactNumber', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-1 md:col-span-2">
                   <label className="text-sm font-medium">Branch Address</label>
-                  <textarea className="input-field h-24" defaultValue="123, Gold Plaza, MG Road, Mumbai, Maharashtra - 400001" />
+                  <textarea 
+                    className="input-field h-24" 
+                    value={settings.branchAddress} 
+                    onChange={(e) => updateSetting('branchAddress', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium">Financial Year Start</label>
-                  <input type="date" className="input-field" defaultValue="2025-04-01" />
+                  <input 
+                    type="date" 
+                    className="input-field" 
+                    value={settings.financialYearStart} 
+                    onChange={(e) => updateSetting('financialYearStart', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium">Currency Symbol</label>
-                  <input className="input-field" defaultValue="₹" />
+                  <input 
+                    className="input-field" 
+                    value={settings.currencySymbol} 
+                    onChange={(e) => updateSetting('currencySymbol', e.target.value)}
+                  />
                 </div>
               </div>
             )}
@@ -161,7 +238,13 @@ export default function Settings() {
                     <p className="text-xs text-gray-500">Applied to all new Girvi loans by default</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input type="number" step="0.1" className="w-20 input-field text-center font-bold" defaultValue="1.5" />
+                    <input 
+                      type="number" 
+                      step="0.1" 
+                      className="w-20 input-field text-center font-bold" 
+                      value={settings.standardInterestRate} 
+                      onChange={(e) => updateSetting('standardInterestRate', e.target.value)}
+                    />
                     <span className="font-bold text-gray-500">% / Mo</span>
                   </div>
                 </div>
@@ -171,7 +254,13 @@ export default function Settings() {
                     <p className="text-xs text-rose-500">Applied after loan maturity date</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input type="number" step="0.1" className="w-20 input-field text-center font-bold text-rose-700 border-rose-200" defaultValue="2.0" />
+                    <input 
+                      type="number" 
+                      step="0.1" 
+                      className="w-20 input-field text-center font-bold text-rose-700 border-rose-200" 
+                      value={settings.penaltyInterestRate} 
+                      onChange={(e) => updateSetting('penaltyInterestRate', e.target.value)}
+                    />
                     <span className="font-bold text-rose-500">% / Mo</span>
                   </div>
                 </div>

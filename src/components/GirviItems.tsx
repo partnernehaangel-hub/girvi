@@ -42,17 +42,28 @@ export default function GirviItems() {
   const fetchItems = () => {
     setIsLoading(true);
     fetch('/api/items')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch items');
+        return res.json();
+      })
       .then(data => {
         setItems(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching items:', err);
         setIsLoading(false);
       });
   };
 
   const fetchLoans = () => {
     fetch('/api/loans')
-      .then(res => res.json())
-      .then(setLoans);
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch loans');
+        return res.json();
+      })
+      .then(setLoans)
+      .catch(err => console.error('Error fetching loans:', err));
   };
 
   const calculateValuation = (netWeight: string, marketRate: string) => {
@@ -62,26 +73,34 @@ export default function GirviItems() {
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newItem)
-    });
-    if (res.ok) {
-      setIsAddModalOpen(false);
-      setNewItem({
-        loan_id: '',
-        type: 'Gold Ornament',
-        purity: '22K',
-        gross_weight: '',
-        net_weight: '',
-        wastage: '0',
-        market_rate: '',
-        valuation: 0,
-        packet_number: '',
-        locker_location: ''
+    try {
+      const res = await fetch('/api/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newItem)
       });
-      fetchItems();
+      if (res.ok) {
+        setIsAddModalOpen(false);
+        setNewItem({
+          loan_id: '',
+          type: 'Gold Ornament',
+          purity: '22K',
+          gross_weight: '',
+          net_weight: '',
+          wastage: '0',
+          market_rate: '',
+          valuation: 0,
+          packet_number: '',
+          locker_location: ''
+        });
+        fetchItems();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to add item');
+      }
+    } catch (err) {
+      console.error('Error adding item:', err);
+      alert('Network error while adding item');
     }
   };
 

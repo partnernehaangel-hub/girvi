@@ -37,6 +37,7 @@ export default function LoanManagement() {
   const [items, setItems] = React.useState<any[]>([
     { type: 'Gold Ornament', purity: '22K', gross_weight: 10.5, net_weight: 10.2, wastage: 0, market_rate: 6500, valuation: 66300, packet_number: 'PKT-001', locker_location: 'Locker A-1', photos: [] }
   ]);
+  const [settings, setSettings] = React.useState<any>(null);
 
   const fetchLoans = () => {
     fetch('/api/loans')
@@ -57,6 +58,13 @@ export default function LoanManagement() {
       })
       .then(setCustomers)
       .catch(err => console.error('Error fetching customers:', err));
+
+    fetch('/api/settings')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) setSettings(data);
+      })
+      .catch(err => console.error('Error fetching settings:', err));
   }, []);
 
   const handleApproveClosure = async (loanId: number, approve: boolean) => {
@@ -422,7 +430,15 @@ export default function LoanManagement() {
                   </h3>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-500">Monthly Interest (%)</label>
-                    <input name="interest_rate" type="number" step="0.01" required className="input-field" placeholder="1.5" />
+                    <input 
+                      name="interest_rate" 
+                      type="number" 
+                      step="0.01" 
+                      required 
+                      className="input-field" 
+                      placeholder="1.5" 
+                      defaultValue={settings?.standardInterestRate || "1.5"}
+                    />
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-500">Interest Type</label>
@@ -457,7 +473,14 @@ export default function LoanManagement() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-500">Penalty Rate (% after maturity)</label>
-                    <input name="penalty_rate" type="number" step="0.01" className="input-field" placeholder="2.0" />
+                    <input 
+                      name="penalty_rate" 
+                      type="number" 
+                      step="0.01" 
+                      className="input-field" 
+                      placeholder="2.0" 
+                      defaultValue={settings?.penaltyInterestRate || "2.0"}
+                    />
                   </div>
                 </div>
               </div>

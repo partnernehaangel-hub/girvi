@@ -84,9 +84,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </button>
         </form>
 
-        <div className="p-6 bg-gray-50 border-t border-gray-100 text-center">
+        <div className="p-6 bg-gray-50 border-t border-gray-100 text-center space-y-2">
           <p className="text-xs text-gray-400">
             Secure Access Only • Unauthorized Access Prohibited
+          </p>
+          <p className="text-[10px] text-blue-400 font-medium">
+            Customers can login using their portal credentials
           </p>
         </div>
       </motion.div>
