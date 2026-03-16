@@ -7,167 +7,192 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const db = new Database("girvi.db");
+// Global error handling for server
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
 
-// Initialize Database Schema
-db.exec(`
-  CREATE TABLE IF NOT EXISTS customers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    mobile TEXT NOT NULL,
-    address TEXT,
-    aadhaar TEXT,
-    aadhaar_proof TEXT,
-    pan TEXT,
-    pan_proof TEXT,
-    photo TEXT,
-    signature TEXT,
-    nominee TEXT,
-    nominee_proof TEXT,
-    attachments TEXT, -- JSON array of extra proofs
-    status TEXT DEFAULT 'active', -- active, blacklisted
-    username TEXT,
-    password TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
 
-  -- Seed Indian Customers if empty
-  INSERT INTO customers (name, mobile, address, status, username, password) 
-  SELECT 'Rajesh Kumar', '9876543210', 'Mumbai, Maharashtra', 'active', 'user', '12345'
-  WHERE NOT EXISTS (SELECT 1 FROM customers);
-  
-  INSERT INTO customers (name, mobile, address, status) 
-  SELECT 'Priya Sharma', '9123456789', 'Delhi, NCR', 'active'
-  WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Priya Sharma');
-
-  INSERT INTO customers (name, mobile, address, status) 
-  SELECT 'Amit Patel', '9988776655', 'Ahmedabad, Gujarat', 'blacklisted'
-  WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Amit Patel');
-
-  INSERT INTO customers (name, mobile, address, status) 
-  SELECT 'Sneha Reddy', '9000011111', 'Hyderabad, Telangana', 'active'
-  WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Sneha Reddy');
-
-  CREATE TABLE IF NOT EXISTS loans (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    customer_id INTEGER,
-    loan_number TEXT UNIQUE,
-    amount REAL NOT NULL,
-    disbursement_mode TEXT,
-    interest_rate REAL,
-    interest_type TEXT,
-    compounding TEXT,
-    cycle TEXT,
-    start_date DATE,
-    maturity_date DATE,
-    penalty_rate REAL,
-    status TEXT DEFAULT 'active',
-    closure_requested INTEGER DEFAULT 0, -- 0: no, 1: requested
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(customer_id) REFERENCES customers(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    loan_id INTEGER,
-    type TEXT,
-    purity TEXT,
-    gross_weight REAL,
-    net_weight REAL,
-    wastage REAL,
-    market_rate REAL,
-    valuation REAL,
-    packet_number TEXT,
-    locker_location TEXT,
-    photos TEXT,
-    status TEXT DEFAULT 'pledged',
-    FOREIGN KEY(loan_id) REFERENCES loans(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS payments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    loan_id INTEGER,
-    date DATE,
-    amount REAL,
-    mode TEXT,
-    type TEXT, -- principal, interest, penalty
-    balance REAL,
-    transaction_id TEXT UNIQUE,
-    remarks TEXT,
-    FOREIGN KEY(loan_id) REFERENCES loans(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS documents (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    loan_id INTEGER,
-    customer_id INTEGER,
-    title TEXT NOT NULL,
-    type TEXT,
-    source TEXT,
-    file_data TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(loan_id) REFERENCES loans(id),
-    FOREIGN KEY(customer_id) REFERENCES customers(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS lockers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    number TEXT UNIQUE NOT NULL,
-    total_boxes INTEGER DEFAULT 12,
-    status TEXT DEFAULT 'secure',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS boxes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    locker_id INTEGER,
-    box_number INTEGER NOT NULL,
-    packet_id TEXT,
-    loan_id INTEGER,
-    customer_id INTEGER,
-    status TEXT DEFAULT 'empty', -- empty, occupied
-    FOREIGN KEY(locker_id) REFERENCES lockers(id),
-    FOREIGN KEY(loan_id) REFERENCES loans(id),
-    FOREIGN KEY(customer_id) REFERENCES customers(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS audit_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    action TEXT NOT NULL,
-    entity_type TEXT,
-    entity_id INTEGER,
-    details TEXT,
-    user_email TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  -- Seed initial lockers if empty
-  INSERT INTO lockers (number, total_boxes) 
-  SELECT 'L-001', 12 WHERE NOT EXISTS (SELECT 1 FROM lockers WHERE number = 'L-001');
-  INSERT INTO lockers (number, total_boxes) 
-  SELECT 'L-002', 12 WHERE NOT EXISTS (SELECT 1 FROM lockers WHERE number = 'L-002');
-
-  CREATE TABLE IF NOT EXISTS top_ups (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    loan_id INTEGER,
-    amount REAL NOT NULL,
-    date DATE NOT NULL,
-    remarks TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(loan_id) REFERENCES loans(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT
-  );
-`);
+let db: any;
 
 async function startServer() {
+  try {
+    console.log("Initializing database...");
+    db = new Database("girvi.db");
+
+    // Initialize Database Schema
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        mobile TEXT NOT NULL,
+        address TEXT,
+        aadhaar TEXT,
+        aadhaar_proof TEXT,
+        pan TEXT,
+        pan_proof TEXT,
+        photo TEXT,
+        signature TEXT,
+        nominee TEXT,
+        nominee_proof TEXT,
+        attachments TEXT, -- JSON array of extra proofs
+        status TEXT DEFAULT 'active', -- active, blacklisted
+        username TEXT,
+        password TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Seed Indian Customers if empty
+      INSERT INTO customers (name, mobile, address, status, username, password) 
+      SELECT 'Rajesh Kumar', '9876543210', 'Mumbai, Maharashtra', 'active', 'user', '12345'
+      WHERE NOT EXISTS (SELECT 1 FROM customers);
+      
+      INSERT INTO customers (name, mobile, address, status) 
+      SELECT 'Priya Sharma', '9123456789', 'Delhi, NCR', 'active'
+      WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Priya Sharma');
+
+      INSERT INTO customers (name, mobile, address, status) 
+      SELECT 'Amit Patel', '9988776655', 'Ahmedabad, Gujarat', 'blacklisted'
+      WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Amit Patel');
+
+      INSERT INTO customers (name, mobile, address, status) 
+      SELECT 'Sneha Reddy', '9000011111', 'Hyderabad, Telangana', 'active'
+      WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Sneha Reddy');
+
+      CREATE TABLE IF NOT EXISTS loans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_id INTEGER,
+        loan_number TEXT UNIQUE,
+        amount REAL NOT NULL,
+        disbursement_mode TEXT,
+        interest_rate REAL,
+        interest_type TEXT,
+        compounding TEXT,
+        cycle TEXT,
+        start_date DATE,
+        maturity_date DATE,
+        penalty_rate REAL,
+        status TEXT DEFAULT 'active',
+        closure_requested INTEGER DEFAULT 0, -- 0: no, 1: requested
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(customer_id) REFERENCES customers(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        loan_id INTEGER,
+        type TEXT,
+        purity TEXT,
+        gross_weight REAL,
+        net_weight REAL,
+        wastage REAL,
+        market_rate REAL,
+        valuation REAL,
+        packet_number TEXT,
+        locker_location TEXT,
+        photos TEXT,
+        status TEXT DEFAULT 'pledged',
+        FOREIGN KEY(loan_id) REFERENCES loans(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        loan_id INTEGER,
+        date DATE,
+        amount REAL,
+        mode TEXT,
+        type TEXT, -- principal, interest, penalty
+        balance REAL,
+        transaction_id TEXT UNIQUE,
+        remarks TEXT,
+        FOREIGN KEY(loan_id) REFERENCES loans(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS documents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        loan_id INTEGER,
+        customer_id INTEGER,
+        title TEXT NOT NULL,
+        type TEXT,
+        source TEXT,
+        file_data TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(loan_id) REFERENCES loans(id),
+        FOREIGN KEY(customer_id) REFERENCES customers(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS lockers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        number TEXT UNIQUE NOT NULL,
+        total_boxes INTEGER DEFAULT 12,
+        status TEXT DEFAULT 'secure',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS boxes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        locker_id INTEGER,
+        box_number INTEGER NOT NULL,
+        packet_id TEXT,
+        loan_id INTEGER,
+        customer_id INTEGER,
+        status TEXT DEFAULT 'empty', -- empty, occupied
+        FOREIGN KEY(locker_id) REFERENCES lockers(id),
+        FOREIGN KEY(loan_id) REFERENCES loans(id),
+        FOREIGN KEY(customer_id) REFERENCES customers(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT NOT NULL,
+        entity_type TEXT,
+        entity_id INTEGER,
+        details TEXT,
+        user_email TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Seed initial lockers if empty
+      INSERT INTO lockers (number, total_boxes) 
+      SELECT 'L-001', 12 WHERE NOT EXISTS (SELECT 1 FROM lockers WHERE number = 'L-001');
+      INSERT INTO lockers (number, total_boxes) 
+      SELECT 'L-002', 12 WHERE NOT EXISTS (SELECT 1 FROM lockers WHERE number = 'L-002');
+
+      CREATE TABLE IF NOT EXISTS top_ups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        loan_id INTEGER,
+        amount REAL NOT NULL,
+        date DATE NOT NULL,
+        remarks TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(loan_id) REFERENCES loans(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
+      );
+    `);
+    console.log("Database initialized successfully.");
+  } catch (err) {
+    console.error("Database initialization failed:", err);
+    console.log("Attempting to use memory database as fallback...");
+    db = new Database(":memory:");
+  }
+
+  console.log("Starting Express server...");
   const app = express();
   const PORT = 3000;
 
   app.use(express.json({ limit: '50mb' }));
+
+  // Health check
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
 
   // Auth API
   app.post("/api/login", (req, res) => {
@@ -537,74 +562,76 @@ async function startServer() {
     res.json(logs);
   });
 
+  // Reports Endpoints
+  app.get("/api/reports/released-items", (req, res) => {
+    try {
+      const loans = db.prepare(`
+        SELECT l.*, c.name as customer_name 
+        FROM loans l
+        JOIN customers c ON l.customer_id = c.id
+        WHERE l.status = 'closed'
+        ORDER BY l.updated_at DESC
+      `).all();
+      res.json(loans);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  app.get("/api/reports/day-book", (req, res) => {
+    const { date } = req.query;
+    const targetDate = date ? (date as string) : new Date().toISOString().split('T')[0];
+    
+    try {
+      // Get loans disbursed on that day
+      const loans = db.prepare(`
+        SELECT 'LOAN' as type, loan_number as ref, amount, customer_id, created_at as time
+        FROM loans 
+        WHERE date(created_at) = date(?)
+      `).all(targetDate);
+
+      // Get payments received on that day
+      const payments = db.prepare(`
+        SELECT 'PAYMENT' as type, 'PAY-' || id as ref, amount, (SELECT customer_id FROM loans WHERE id = payments.loan_id) as customer_id, created_at as time
+        FROM payments
+        WHERE date(created_at) = date(?)
+      `).all(targetDate);
+
+      // Get top-ups on that day
+      const topUps = db.prepare(`
+        SELECT 'TOP-UP' as type, 'TOP-' || id as ref, amount, (SELECT customer_id FROM loans WHERE id = top_ups.loan_id) as customer_id, created_at as time
+        FROM top_ups
+        WHERE date(created_at) = date(?)
+      `).all(targetDate);
+
+      const allTransactions = [...loans, ...payments, ...topUps].sort((a, b) => 
+        new Date(a.time).getTime() - new Date(b.time).getTime()
+      );
+
+      res.json(allTransactions);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    console.log("Starting Vite in middleware mode...");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
+    console.log("Serving static files from dist...");
     app.use(express.static(path.join(__dirname, "dist")));
     app.get("*", (req, res) => {
       res.sendFile(path.join(__dirname, "dist", "index.html"));
     });
   }
 
-  // Reports Endpoints
-app.get("/api/reports/released-items", (req, res) => {
-  try {
-    const loans = db.prepare(`
-      SELECT l.*, c.name as customer_name 
-      FROM loans l
-      JOIN customers c ON l.customer_id = c.id
-      WHERE l.status = 'closed'
-      ORDER BY l.updated_at DESC
-    `).all();
-    res.json(loans);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
-
-app.get("/api/reports/day-book", (req, res) => {
-  const { date } = req.query;
-  const targetDate = date ? (date as string) : new Date().toISOString().split('T')[0];
-  
-  try {
-    // Get loans disbursed on that day
-    const loans = db.prepare(`
-      SELECT 'LOAN' as type, loan_number as ref, amount, customer_id, created_at as time
-      FROM loans 
-      WHERE date(created_at) = date(?)
-    `).all(targetDate);
-
-    // Get payments received on that day
-    const payments = db.prepare(`
-      SELECT 'PAYMENT' as type, 'PAY-' || id as ref, amount, (SELECT customer_id FROM loans WHERE id = payments.loan_id) as customer_id, created_at as time
-      FROM payments
-      WHERE date(created_at) = date(?)
-    `).all(targetDate);
-
-    // Get top-ups on that day
-    const topUps = db.prepare(`
-      SELECT 'TOP-UP' as type, 'TOP-' || id as ref, amount, (SELECT customer_id FROM loans WHERE id = top_ups.loan_id) as customer_id, created_at as time
-      FROM top_ups
-      WHERE date(created_at) = date(?)
-    `).all(targetDate);
-
-    const allTransactions = [...loans, ...payments, ...topUps].sort((a, b) => 
-      new Date(a.time).getTime() - new Date(b.time).getTime()
-    );
-
-    res.json(allTransactions);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
-
-app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
