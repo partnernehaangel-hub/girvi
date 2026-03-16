@@ -12,6 +12,7 @@ import LegalDocs from './components/LegalDocs';
 import GirviItems from './components/GirviItems';
 import Alerts from './components/Alerts';
 import Settings from './components/Settings';
+import SQLEditor from './components/SQLEditor';
 import LoginPage from './components/LoginPage';
 import CustomerPanel from './components/CustomerPanel';
 
@@ -81,6 +82,7 @@ export default function App() {
             <Route path="/docs" element={<LegalDocs />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/sql-editor" element={<SQLEditor />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

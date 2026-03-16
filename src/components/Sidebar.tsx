@@ -11,6 +11,7 @@ import {
   BarChart3, 
   Bell, 
   Settings,
+  Database,
   LogOut,
   ChevronRight,
   Menu,
@@ -37,6 +38,7 @@ const menuItems = [
   { icon: BarChart3, label: 'Reports', path: '/reports' },
   { icon: Bell, label: 'Alerts', path: '/alerts' },
   { icon: Settings, label: 'Settings', path: '/settings' },
+  { icon: Database, label: 'SQL Editor', path: '/sql-editor' },
 ];
 
 export default function Sidebar({ onLogout }: { onLogout: () => void }) {

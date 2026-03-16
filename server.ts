@@ -209,6 +209,14 @@ async function startServer() {
       SELECT 4, 'LN-1003', 25000, 'UPI', 2.0, 'simple', date('now', '-15 days'), date('now', '+5 months'), 'active'
       WHERE NOT EXISTS (SELECT 1 FROM loans WHERE loan_number = 'LN-1003');
 
+      INSERT INTO loans (customer_id, loan_number, amount, disbursement_mode, interest_rate, interest_type, start_date, maturity_date, status)
+      SELECT 5, 'LN-1004', 75000, 'Cash', 1.8, 'simple', date('now', '-10 days'), date('now', '+6 months'), 'active'
+      WHERE NOT EXISTS (SELECT 1 FROM loans WHERE loan_number = 'LN-1004');
+
+      INSERT INTO loans (customer_id, loan_number, amount, disbursement_mode, interest_rate, interest_type, start_date, maturity_date, status)
+      SELECT 6, 'LN-1005', 200000, 'Bank Transfer', 1.0, 'compounded', date('now', '-5 days'), date('now', '+12 months'), 'active'
+      WHERE NOT EXISTS (SELECT 1 FROM loans WHERE loan_number = 'LN-1005');
+
       -- Seed items for loans
       INSERT INTO items (loan_id, type, purity, gross_weight, net_weight, market_rate, valuation, packet_number, locker_location)
       SELECT 1, 'Gold Chain', '22K', 12.5, 12.0, 6500, 78000, 'PKT-A1', 'L-001/B1'
@@ -217,6 +225,14 @@ async function startServer() {
       INSERT INTO items (loan_id, type, purity, gross_weight, net_weight, market_rate, valuation, packet_number, locker_location)
       SELECT 2, 'Gold Bangles', '22K', 35.0, 34.2, 6500, 222300, 'PKT-A2', 'L-001/B2'
       WHERE NOT EXISTS (SELECT 1 FROM items WHERE loan_id = 2);
+
+      INSERT INTO items (loan_id, type, purity, gross_weight, net_weight, market_rate, valuation, packet_number, locker_location)
+      SELECT 4, 'Silver Ornaments', '925', 500.0, 480.0, 75, 36000, 'PKT-B1', 'L-002/B1'
+      WHERE NOT EXISTS (SELECT 1 FROM items WHERE loan_id = 4);
+
+      INSERT INTO items (loan_id, type, purity, gross_weight, net_weight, market_rate, valuation, packet_number, locker_location)
+      SELECT 5, 'Diamond Ring', '18K', 5.2, 4.8, 150000, 350000, 'PKT-B2', 'L-002/B2'
+      WHERE NOT EXISTS (SELECT 1 FROM items WHERE loan_id = 5);
 
       -- Seed some payments
       INSERT INTO payments (loan_id, date, amount, mode, type, transaction_id, remarks)
@@ -650,6 +666,28 @@ async function startServer() {
   });
 
   // Audit Logs
+  app.get("/api/admin/sql", (req, res) => {
+    res.status(405).json({ error: "Use POST to execute queries" });
+  });
+
+  app.post("/api/admin/sql", (req, res) => {
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ error: "Query is required" });
+
+    try {
+      const stmt = db.prepare(query);
+      if (query.trim().toLowerCase().startsWith('select') || query.trim().toLowerCase().startsWith('pragma')) {
+        const rows = stmt.all();
+        res.json(rows);
+      } else {
+        const result = stmt.run();
+        res.json({ success: true, changes: result.changes, lastInsertRowid: result.lastInsertRowid });
+      }
+    } catch (err) {
+      res.status(400).json({ error: (err as Error).message });
+    }
+  });
+
   app.get("/api/audit-logs", (req, res) => {
     const logs = db.prepare("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 100").all();
     res.json(logs);
