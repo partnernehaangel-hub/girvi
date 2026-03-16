@@ -49,14 +49,22 @@ export default function LegalDocs() {
 
   const fetchDocs = () => {
     fetch('/api/documents')
-      .then(res => res.json())
-      .then(setDocuments);
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch documents');
+        return res.json();
+      })
+      .then(setDocuments)
+      .catch(err => console.error('Error fetching docs:', err));
   };
 
   const fetchLoans = () => {
     fetch('/api/loans')
-      .then(res => res.json())
-      .then(setLoans);
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch loans');
+        return res.json();
+      })
+      .then(setLoans)
+      .catch(err => console.error('Error fetching loans:', err));
   };
 
   const handleFileUpload = async (e: React.FormEvent) => {
@@ -65,26 +73,34 @@ export default function LegalDocs() {
 
     const reader = new FileReader();
     reader.onload = async () => {
-      const base64 = reader.result as string;
-      const loan = loans.find(l => l.id.toString() === uploadData.loan_id);
-      
-      const res = await fetch('/api/documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          loan_id: uploadData.loan_id || null,
-          customer_id: loan?.customer_id || null,
-          title: uploadData.title,
-          type: uploadData.type,
-          source: 'uploaded',
-          file_data: base64
-        })
-      });
+      try {
+        const base64 = reader.result as string;
+        const loan = loans.find(l => l.id.toString() === uploadData.loan_id);
+        
+        const res = await fetch('/api/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            loan_id: uploadData.loan_id || null,
+            customer_id: loan?.customer_id || null,
+            title: uploadData.title,
+            type: uploadData.type,
+            source: 'uploaded',
+            file_data: base64
+          })
+        });
 
-      if (res.ok) {
-        setIsUploadModalOpen(false);
-        setUploadData({ title: '', type: 'other', loan_id: '', file: null });
-        fetchDocs();
+        if (res.ok) {
+          setIsUploadModalOpen(false);
+          setUploadData({ title: '', type: 'other', loan_id: '', file: null });
+          fetchDocs();
+        } else {
+          const err = await res.json();
+          alert('Upload failed: ' + (err.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert('An error occurred during upload');
       }
     };
     reader.readAsDataURL(uploadData.file);
@@ -113,23 +129,31 @@ export default function LegalDocs() {
     // For now, we generate a generic but professional summary PDF
     exportToPDF(title, headers, data, title.replace(/\s+/g, '_'));
 
-    const res = await fetch('/api/documents', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        loan_id: selectedLoanId,
-        customer_id: loan.customer_id,
-        title: title,
-        type: selectedTemplate.id,
-        source: 'generated',
-        file_data: 'GENERATED_PDF_CONTENT'
-      })
-    });
+    try {
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          loan_id: selectedLoanId,
+          customer_id: loan.customer_id,
+          title: title,
+          type: selectedTemplate.id,
+          source: 'generated',
+          file_data: 'GENERATED_PDF_CONTENT'
+        })
+      });
 
-    if (res.ok) {
-      setIsGenerateModalOpen(false);
-      setSelectedLoanId('');
-      fetchDocs();
+      if (res.ok) {
+        setIsGenerateModalOpen(false);
+        setSelectedLoanId('');
+        fetchDocs();
+      } else {
+        const err = await res.json();
+        alert('Failed to save generated document: ' + (err.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Generation error:', error);
+      alert('An error occurred while saving the document');
     }
   };
 

@@ -328,7 +328,13 @@ export default function LoanManagement() {
                         setIsTopUpModalOpen(false);
                         setTopUpAmount('');
                         setTopUpRemarks('');
-                        fetch('/api/loans').then(res => res.json()).then(setLoans);
+                        fetch('/api/loans')
+                          .then(res => {
+                            if (!res.ok) throw new Error('Failed to refresh loans');
+                            return res.json();
+                          })
+                          .then(setLoans)
+                          .catch(err => console.error('Error refreshing loans:', err));
                       } else {
                         const err = await res.json();
                         alert("Top up failed: " + err.error);
@@ -382,7 +388,13 @@ export default function LoanManagement() {
                 
                 if (res.ok) {
                   setIsAddModalOpen(false);
-                  fetch('/api/loans').then(res => res.json()).then(setLoans);
+                  fetch('/api/loans')
+                    .then(res => {
+                      if (!res.ok) throw new Error('Failed to refresh loans');
+                      return res.json();
+                    })
+                    .then(setLoans)
+                    .catch(err => console.error('Error refreshing loans:', err));
                 } else {
                   const err = await res.json();
                   alert("Failed to create loan: " + (err.error || "Unknown error"));
