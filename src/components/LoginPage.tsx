@@ -36,14 +36,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </div>
           <h1 className="text-2xl font-bold text-white">Girvi Software Login</h1>
           <p className="text-blue-100 text-sm mt-2">Gold & Silver Girvi Management System</p>
-          <div className="mt-4 flex flex-col gap-2">
-            <div className="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] text-white/80 font-medium">
-              Admin: admin | 12345
-            </div>
-            <div className="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] text-white/80 font-medium">
-              Customer: user | 12345
-            </div>
-          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6">

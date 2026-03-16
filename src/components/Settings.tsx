@@ -139,7 +139,7 @@ export default function Settings() {
                 </div>
                 <div className="space-y-1 md:col-span-2">
                   <label className="text-sm font-medium">Branch Address</label>
-                  <textarea className="input-field h-24">123, Gold Plaza, MG Road, Mumbai, Maharashtra - 400001</textarea>
+                  <textarea className="input-field h-24" defaultValue="123, Gold Plaza, MG Road, Mumbai, Maharashtra - 400001" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium">Financial Year Start</label>

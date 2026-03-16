@@ -39,12 +39,24 @@ export default function LoanManagement() {
   ]);
 
   const fetchLoans = () => {
-    fetch('/api/loans').then(res => res.json()).then(setLoans);
+    fetch('/api/loans')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch loans');
+        return res.json();
+      })
+      .then(setLoans)
+      .catch(err => console.error('Error fetching loans:', err));
   };
 
   React.useEffect(() => {
     fetchLoans();
-    fetch('/api/customers').then(res => res.json()).then(setCustomers);
+    fetch('/api/customers')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch customers');
+        return res.json();
+      })
+      .then(setCustomers)
+      .catch(err => console.error('Error fetching customers:', err));
   }, []);
 
   const handleApproveClosure = async (loanId: number, approve: boolean) => {

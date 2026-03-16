@@ -195,13 +195,16 @@ export default function CustomerManagement() {
   React.useEffect(() => {
     setIsLoading(true);
     fetch('/api/customers')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch customers');
+        return res.json();
+      })
       .then(data => {
         setCustomers(data);
         setIsLoading(false);
       })
       .catch(err => {
-        console.error(err);
+        console.error('Error fetching customers:', err);
         setIsLoading(false);
       });
   }, []);
@@ -209,8 +212,12 @@ export default function CustomerManagement() {
   React.useEffect(() => {
     if (selectedCustomer) {
       fetch(`/api/loans?customerId=${selectedCustomer.id}`)
-        .then(res => res.json())
-        .then(setCustomerLoans);
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to fetch customer loans');
+          return res.json();
+        })
+        .then(setCustomerLoans)
+        .catch(err => console.error('Error fetching customer loans:', err));
     }
   }, [selectedCustomer]);
 

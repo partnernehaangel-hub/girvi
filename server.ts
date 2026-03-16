@@ -18,34 +18,152 @@ process.on('unhandledRejection', (reason, promise) => {
 
 let db: any;
 
+const SCHEMA = `
+  CREATE TABLE IF NOT EXISTS customers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    mobile TEXT NOT NULL,
+    address TEXT,
+    aadhaar TEXT,
+    aadhaar_proof TEXT,
+    pan TEXT,
+    pan_proof TEXT,
+    photo TEXT,
+    signature TEXT,
+    nominee TEXT,
+    nominee_proof TEXT,
+    attachments TEXT, -- JSON array of extra proofs
+    status TEXT DEFAULT 'active', -- active, blacklisted
+    username TEXT,
+    password TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS loans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER,
+    loan_number TEXT UNIQUE,
+    amount REAL NOT NULL,
+    disbursement_mode TEXT,
+    interest_rate REAL,
+    interest_type TEXT,
+    compounding TEXT,
+    cycle TEXT,
+    start_date DATE,
+    maturity_date DATE,
+    penalty_rate REAL,
+    status TEXT DEFAULT 'active',
+    closure_requested INTEGER DEFAULT 0, -- 0: no, 1: requested
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(customer_id) REFERENCES customers(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    loan_id INTEGER,
+    type TEXT,
+    purity TEXT,
+    gross_weight REAL,
+    net_weight REAL,
+    wastage REAL,
+    market_rate REAL,
+    valuation REAL,
+    packet_number TEXT,
+    locker_location TEXT,
+    photos TEXT,
+    status TEXT DEFAULT 'pledged',
+    FOREIGN KEY(loan_id) REFERENCES loans(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    loan_id INTEGER,
+    date DATE,
+    amount REAL,
+    mode TEXT,
+    type TEXT, -- principal, interest, penalty
+    balance REAL,
+    transaction_id TEXT UNIQUE,
+    remarks TEXT,
+    FOREIGN KEY(loan_id) REFERENCES loans(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    loan_id INTEGER,
+    customer_id INTEGER,
+    title TEXT NOT NULL,
+    type TEXT,
+    source TEXT,
+    file_data TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(loan_id) REFERENCES loans(id),
+    FOREIGN KEY(customer_id) REFERENCES customers(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS lockers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    number TEXT UNIQUE NOT NULL,
+    total_boxes INTEGER DEFAULT 12,
+    status TEXT DEFAULT 'secure',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS boxes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    locker_id INTEGER,
+    box_number INTEGER NOT NULL,
+    packet_id TEXT,
+    loan_id INTEGER,
+    customer_id INTEGER,
+    status TEXT DEFAULT 'empty', -- empty, occupied
+    FOREIGN KEY(locker_id) REFERENCES lockers(id),
+    FOREIGN KEY(loan_id) REFERENCES loans(id),
+    FOREIGN KEY(customer_id) REFERENCES customers(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT NOT NULL,
+    entity_type TEXT,
+    entity_id INTEGER,
+    details TEXT,
+    user_email TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS top_ups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    loan_id INTEGER,
+    amount REAL NOT NULL,
+    date DATE NOT NULL,
+    remarks TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(loan_id) REFERENCES loans(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  );
+`;
+
 async function startServer() {
   try {
     console.log("Initializing database...");
-    db = new Database("girvi.db");
+    try {
+      db = new Database("girvi.db");
+    } catch (err) {
+      console.error("Failed to open girvi.db, falling back to memory:", err);
+      db = new Database(":memory:");
+    }
 
     // Initialize Database Schema
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS customers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        mobile TEXT NOT NULL,
-        address TEXT,
-        aadhaar TEXT,
-        aadhaar_proof TEXT,
-        pan TEXT,
-        pan_proof TEXT,
-        photo TEXT,
-        signature TEXT,
-        nominee TEXT,
-        nominee_proof TEXT,
-        attachments TEXT, -- JSON array of extra proofs
-        status TEXT DEFAULT 'active', -- active, blacklisted
-        username TEXT,
-        password TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
+    db.exec(SCHEMA);
 
-      -- Seed Indian Customers if empty
+    // Seed Indian Customers if empty
+    db.exec(`
       INSERT INTO customers (name, mobile, address, status, username, password) 
       SELECT 'Rajesh Kumar', '9876543210', 'Mumbai, Maharashtra', 'active', 'user', '12345'
       WHERE NOT EXISTS (SELECT 1 FROM customers);
@@ -62,125 +180,28 @@ async function startServer() {
       SELECT 'Sneha Reddy', '9000011111', 'Hyderabad, Telangana', 'active'
       WHERE NOT EXISTS (SELECT 1 FROM customers WHERE name = 'Sneha Reddy');
 
-      CREATE TABLE IF NOT EXISTS loans (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER,
-        loan_number TEXT UNIQUE,
-        amount REAL NOT NULL,
-        disbursement_mode TEXT,
-        interest_rate REAL,
-        interest_type TEXT,
-        compounding TEXT,
-        cycle TEXT,
-        start_date DATE,
-        maturity_date DATE,
-        penalty_rate REAL,
-        status TEXT DEFAULT 'active',
-        closure_requested INTEGER DEFAULT 0, -- 0: no, 1: requested
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(customer_id) REFERENCES customers(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        loan_id INTEGER,
-        type TEXT,
-        purity TEXT,
-        gross_weight REAL,
-        net_weight REAL,
-        wastage REAL,
-        market_rate REAL,
-        valuation REAL,
-        packet_number TEXT,
-        locker_location TEXT,
-        photos TEXT,
-        status TEXT DEFAULT 'pledged',
-        FOREIGN KEY(loan_id) REFERENCES loans(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS payments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        loan_id INTEGER,
-        date DATE,
-        amount REAL,
-        mode TEXT,
-        type TEXT, -- principal, interest, penalty
-        balance REAL,
-        transaction_id TEXT UNIQUE,
-        remarks TEXT,
-        FOREIGN KEY(loan_id) REFERENCES loans(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS documents (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        loan_id INTEGER,
-        customer_id INTEGER,
-        title TEXT NOT NULL,
-        type TEXT,
-        source TEXT,
-        file_data TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(loan_id) REFERENCES loans(id),
-        FOREIGN KEY(customer_id) REFERENCES customers(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS lockers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        number TEXT UNIQUE NOT NULL,
-        total_boxes INTEGER DEFAULT 12,
-        status TEXT DEFAULT 'secure',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS boxes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        locker_id INTEGER,
-        box_number INTEGER NOT NULL,
-        packet_id TEXT,
-        loan_id INTEGER,
-        customer_id INTEGER,
-        status TEXT DEFAULT 'empty', -- empty, occupied
-        FOREIGN KEY(locker_id) REFERENCES lockers(id),
-        FOREIGN KEY(loan_id) REFERENCES loans(id),
-        FOREIGN KEY(customer_id) REFERENCES customers(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS audit_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        action TEXT NOT NULL,
-        entity_type TEXT,
-        entity_id INTEGER,
-        details TEXT,
-        user_email TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
       -- Seed initial lockers if empty
       INSERT INTO lockers (number, total_boxes) 
       SELECT 'L-001', 12 WHERE NOT EXISTS (SELECT 1 FROM lockers WHERE number = 'L-001');
       INSERT INTO lockers (number, total_boxes) 
       SELECT 'L-002', 12 WHERE NOT EXISTS (SELECT 1 FROM lockers WHERE number = 'L-002');
-
-      CREATE TABLE IF NOT EXISTS top_ups (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        loan_id INTEGER,
-        amount REAL NOT NULL,
-        date DATE NOT NULL,
-        remarks TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(loan_id) REFERENCES loans(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT
-      );
     `);
+
+    // Check for missing columns (Migrations)
+    const tableInfo = db.prepare("PRAGMA table_info(loans)").all();
+    if (tableInfo.length > 0) {
+      const hasUpdatedAt = tableInfo.some((col: any) => col.name === 'updated_at');
+      if (!hasUpdatedAt) {
+        console.log("Adding updated_at column to loans table...");
+        db.exec("ALTER TABLE loans ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+      }
+    }
+
     console.log("Database initialized successfully.");
   } catch (err) {
-    console.error("Database initialization failed:", err);
-    console.log("Attempting to use memory database as fallback...");
-    db = new Database(":memory:");
+    console.error("Database initialization failed critically:", err);
+    // Last resort fallback
+    if (!db) db = new Database(":memory:");
   }
 
   console.log("Starting Express server...");
@@ -632,6 +653,16 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
+  });
+
+  // Global error handler for Express
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Express Error:', err);
+    res.status(500).json({ 
+      error: "Internal Server Error", 
+      message: err.message,
+      stack: process.env.NODE_ENV === 'production' ? undefined : err.stack 
+    });
   });
 }
 
